@@ -51,6 +51,10 @@
 #include <stdarg.h>
 #include <fcntl.h>
 
+#include <mruby.h>
+#include <mruby/compile.h>
+#include <mruby/string.h>
+
 /* Syntax highlight types */
 #define HL_NORMAL 0
 #define HL_NONPRINT 1
@@ -1264,6 +1268,12 @@ int main(int argc, char **argv) {
     enableRawMode(STDIN_FILENO);
     editorSetStatusMessage(
         "HELP: Ctrl-S = save | Ctrl-Q = quit | Ctrl-F = find");
+
+    mrb_state* mrb = mrb_open();
+    mrb_value ret = mrb_load_string(mrb, "\"Hello, mruby 2 ** 4 = #{2 ** 4}\"");
+    editorSetStatusMessage(RSTRING_PTR(ret));
+    mrb_close(mrb);
+
     while(1) {
         editorRefreshScreen();
         editorProcessKeypress(STDIN_FILENO);
