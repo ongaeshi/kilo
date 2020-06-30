@@ -1137,7 +1137,8 @@ void editorEval(int fd) {
 
     mrb_state* mrb = mrb_open();
     mrb_value ret = mrb_load_string(mrb, query);
-    editorSetStatusMessage(RSTRING_PTR(mrb_str_to_str(mrb, ret)));
+    mrb_value str = mrb_str_to_str(mrb, ret);
+    editorInsertRow(E.rowoff+E.cy, RSTRING_PTR(str), RSTRING_LEN(str));
     mrb_close(mrb);
 }
 
