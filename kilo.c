@@ -116,6 +116,7 @@ enum KEY_ACTION{
         KEY_NULL = 0,       /* NULL */
         CTRL_C = 3,         /* Ctrl-c */
         CTRL_D = 4,         /* Ctrl-d */
+        CTRL_E = 5,         /* Ctrl-e */
         CTRL_F = 6,         /* Ctrl-f */
         CTRL_H = 8,         /* Ctrl-h */
         TAB = 9,            /* Tab */
@@ -1085,6 +1086,15 @@ void editorFind(int fd) {
     }
 }
 
+void editorEval(int fd) {
+    mrb_state* mrb = mrb_open();
+    mrb_value ret = mrb_load_string(mrb, "\"Hello, mruby 2 ** 4 = #{2 ** 4}\"");
+
+    editorSetStatusMessage(RSTRING_PTR(ret));
+    
+    mrb_close(mrb);
+}
+
 /* ========================= Editor events handling  ======================== */
 
 /* Handle cursor position change because arrow keys were pressed. */
@@ -1194,6 +1204,9 @@ void editorProcessKeypress(int fd) {
     case CTRL_F:
         editorFind(fd);
         break;
+    case CTRL_E:
+        editorEval(fd);
+        break;
     case BACKSPACE:     /* Backspace */
     case CTRL_H:        /* Ctrl-h */
     case DEL_KEY:
@@ -1267,12 +1280,7 @@ int main(int argc, char **argv) {
     editorOpen(argv[1]);
     enableRawMode(STDIN_FILENO);
     editorSetStatusMessage(
-        "HELP: Ctrl-S = save | Ctrl-Q = quit | Ctrl-F = find");
-
-    mrb_state* mrb = mrb_open();
-    mrb_value ret = mrb_load_string(mrb, "\"Hello, mruby 2 ** 4 = #{2 ** 4}\"");
-    editorSetStatusMessage(RSTRING_PTR(ret));
-    mrb_close(mrb);
+        "HELP: Ctrl-S = save | Ctrl-Q = quit | Ctrl-F = find | Ctrl-E = eval");
 
     while(1) {
         editorRefreshScreen();
