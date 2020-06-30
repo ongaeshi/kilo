@@ -1087,11 +1087,57 @@ void editorFind(int fd) {
 }
 
 void editorEval(int fd) {
-    mrb_state* mrb = mrb_open();
-    mrb_value ret = mrb_load_string(mrb, "\"Hello, mruby 2 ** 4 = #{2 ** 4}\"");
+    char query[KILO_QUERY_LEN+1] = {0};
+    int qlen = 0;
+    int last_match = -1; /* Last line where a match was found. -1 for none. */
+    int find_next = 0; /* if 1 search next, if -1 search prev. */
+    int saved_hl_line = -1;  /* No saved HL */
+    char *saved_hl = NULL;
 
-    editorSetStatusMessage(RSTRING_PTR(ret));
-    
+#define FIND_RESTORE_HL do { \
+    if (saved_hl) { \
+        memcpy(E.row[saved_hl_line].hl,saved_hl, E.row[saved_hl_line].rsize); \
+        saved_hl = NULL; \
+    } \
+} while (0)
+
+    /* Save the cursor position in order to restore it later. */
+    int saved_cx = E.cx, saved_cy = E.cy;
+    int saved_coloff = E.coloff, saved_rowoff = E.rowoff;
+
+    while(1) {
+        editorSetStatusMessage(
+            "Eval: %s (Use ESC/Arrows/Enter)", query);
+        editorRefreshScreen();
+
+        int c = editorReadKey(fd);
+        if (c == DEL_KEY || c == CTRL_H || c == BACKSPACE) {
+            if (qlen != 0) query[--qlen] = '\0';
+            last_match = -1;
+        } else if (c == ESC || c == ENTER) {
+            if (c == ESC) {
+                E.cx = saved_cx; E.cy = saved_cy;
+                E.coloff = saved_coloff; E.rowoff = saved_rowoff;
+            }
+            FIND_RESTORE_HL;
+            editorSetStatusMessage("");
+            break;
+        } else if (c == ARROW_RIGHT || c == ARROW_DOWN) {
+            find_next = 1;
+        } else if (c == ARROW_LEFT || c == ARROW_UP) {
+            find_next = -1;
+        } else if (isprint(c)) {
+            if (qlen < KILO_QUERY_LEN) {
+                query[qlen++] = c;
+                query[qlen] = '\0';
+                last_match = -1;
+            }
+        }
+    }
+
+    mrb_state* mrb = mrb_open();
+    mrb_value ret = mrb_load_string(mrb, query);
+    editorSetStatusMessage(RSTRING_PTR(mrb_str_to_str(mrb, ret)));
     mrb_close(mrb);
 }
 
